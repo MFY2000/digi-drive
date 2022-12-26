@@ -1,1 +1,0 @@
-lynis audit system --quick --auditor "The Auditor"
