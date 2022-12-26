@@ -3,6 +3,9 @@ from tkinter import ttk
 from PIL import ImageTk, Image
 import subprocess as sub
 
+import datetime
+import xml.etree.ElementTree as ET
+
 
 class ScreenSizing:
       def __init__(self, sizes, window):
@@ -42,7 +45,11 @@ USERID = "id -u"
 USERGROUP = "id -g"
 PCNAME = "hostname"
 
+ISBLOCK = "true"
+AUTOBLOCK = "true"
+
 global_image_list = []
+
 
 
 class RoundedButton(tk.Canvas):
@@ -91,14 +98,14 @@ class Pages(tk.Tk):
 		
 		# creating a container
 		container = tk.Frame(self)
+		self.initializeData()
 		container.pack(side = "top", fill = "both", expand = 1)
 
 		container.grid_rowconfigure(0, weight = 1)
 		container.grid_columnconfigure(0, weight = 1)
 		self.image = []
-		self.inizialize()
 		self.frames = {}
-
+		self.inizialize()
 		for F in (SplashScreen, OnBorading, General, Aboutus):
 
 			frame = F(container, self, self.image)
@@ -108,11 +115,31 @@ class Pages(tk.Tk):
 
 		self.show_frame(SplashScreen)
 
-	# to display the current frame passed as
-	# parameter
+
+	def initializeData(self):
+		try:
+			f = open("./cache/config.txt", "r")
+
+			day = f.readline().replace("\n", "")
+			ISBLOCK = (f.readline()).replace("\n", "")
+			AUTOBLOCK = (f.readline()).replace("\n", "")
+
+			f.close()
+			current_time = datetime.datetime.now()
+
+			if(current_time.day == int(day) and AUTOBLOCK == "true"):
+				if(ISBLOCK == "true"):
+					self.blockUsb()
+
+
+			pass
+		finally:
+			pass
+
 	def show_frame(self, cont):
 		frame = self.frames[cont]
 		frame.tkraise()
+
 	def inizialize(self):
 		self.image = [
 			tk.PhotoImage(file = './assets/bg.png'),
@@ -127,8 +154,15 @@ class Pages(tk.Tk):
 			tk.PhotoImage(file = './assets/icons/image-07.png')
 		]
 
-
-
+	def blockUsb(self):
+		try:
+				tree = ET.parse('./cache/config.xml')
+				root = tree.getroot()
+				root[1].text = "false"
+				script = "block" if ISBLOCK == "true" else "unblock"
+				cmd(f"sh ./Script/{script}.sh").runFile()
+		finally:
+			pass
 
 class SplashScreen(tk.Frame):
 	def __init__(self, parent, controller, images):
@@ -162,7 +196,6 @@ class cmd:
 		self.output = self.output.decode('utf-8')
 		self.err = self.err.decode('utf-8')
 		
-
 class OnBorading(tk.Frame):
 	def __init__(self, parent, controller, images):
 			tk.Frame.__init__(self, parent)
@@ -177,8 +210,10 @@ class OnBorading(tk.Frame):
 			
 			ScanUpdate.bind("<Button-1>", lambda e: (cmd("sh ./Script/scan.sh").runFile()))
 			
-			button1 = RoundedButton(self, 90, 30, 15, 1, BUTTONCOLOR ,command = lambda : controller.show_frame(Aboutus))
-			button1.create_text(45, 15, text="Block USB", fill="white", font=BUTTONFONT)
+			print(ISBLOCK)
+
+			button1 = RoundedButton(self, 90, 30, 15, 1, BUTTONCOLOR if ISBLOCK == "true" else "green" ,command = lambda : controller.blockUsb() )
+			button1.create_text(45, 15, text= 'Block' if ISBLOCK == "true" else "Unblock"+" USB", fill="white", font=BUTTONFONT)
 			button1.place(x=450, y=25)
 			
 			ttk.Label(self, text = DETAILS_BUTTON, font=SPECIALFONT).place(x = 375, y = 59)
@@ -274,16 +309,11 @@ class General(tk.Frame):
 		arrayOfCheckbox[2].grid(row = 4, column = 0, sticky = tk.W)
 		arrayOfCheckbox[3].grid(row = 5, column = 0, sticky = tk.W)
 		
-		
-
 		# setting image with the help of label
-		
 		
 		# arranging button widgets
 		b1 = tk.Button(master, text = "Save", bg=SECONDARYCOLOR, width = 10, command = lambda: print("Save"))
 		b1.grid(row = 3, column = 2, sticky = tk.E)
-
-
 
 
 # Driver Code
