@@ -1,11 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
-from PIL import ImageTk, Image
 import subprocess as sub
 
 import datetime
-import xml.etree.ElementTree as ET
-
 
 class ScreenSizing:
       def __init__(self, sizes, window):
@@ -32,12 +29,14 @@ PRIMARYFONT =("Inter", 16, "bold")
 SECONDARYFONT =("Inter", 8)
 BUTTONFONT =("Inter", 6)
 SPECIALFONT =("Itim", 10)
-EVENTFONT =("Verdana", 35)
+EVENTFONT =("Itim", 15, "bold")
 
 # COLORS
 PRIMARYCOLOR = "#000000"
 SECONDARYCOLOR = "#001AFF"
 BUTTONCOLOR = "#DA2A2A"
+
+
 
 # Commands
 USERNAME = "whoami"
@@ -48,9 +47,29 @@ PCNAME = "hostname"
 ISBLOCK = "true"
 AUTOBLOCK = "true"
 DATE = "00"
-global_image_list = []
 
 
+
+class cmd:
+	def __init__(self, command):
+		self.command = command
+		self.output = ""
+		self.err = ""
+		self.exit_code = ""
+
+	def run(self):
+		self.output = sub.check_output(self.command, shell=True).decode("utf-8")
+		return self.output.replace("\n", "")
+	
+	def runFile(self):
+		sub.call(self.command, shell=True)
+
+	def run2(self):
+		self.process = sub.Popen(self.command, stdout=sub.PIPE, shell=True)
+		(self.output, self.err) = self.process.communicate()
+		self.exit_code = self.process.wait()
+		self.output = self.output.decode('utf-8')
+		self.err = self.err.decode('utf-8')
 
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, width, height, cornerradius, padding, color, sttext:str="", command=None):
@@ -92,29 +111,30 @@ class RoundedButton(tk.Canvas):
             self.command()
 
 class Pages(tk.Tk):
-	# __init__ function for class Pages
 	def __init__(self, *args, **kwargs):
 		tk.Tk.__init__(self, *args, **kwargs)
 		
-		# creating a container
+		self.image = []
+		self.frames = {}
+		self.listScreens = [SplashScreen, OnBorading, General, Aboutus]
+		
 		container = tk.Frame(self)
-		self.initializeData()
 		container.pack(side = "top", fill = "both", expand = 1)
 
 		container.grid_rowconfigure(0, weight = 1)
 		container.grid_columnconfigure(0, weight = 1)
-		self.image = []
-		self.frames = {}
-		self.inizialize()
-		for F in (SplashScreen, OnBorading, General, Aboutus):
 
+		self.initializeData()
+		self.inizialize()
+
+
+		for F in (self.listScreens):
 			frame = F(container, self, self.image)
 			self.frames[F] = frame
 
 			frame.grid(row = 0, column = 0, sticky ="nsew")
 
-		self.show_frame(SplashScreen)
-
+		self.show_frame(self.listScreens[0])
 
 	def initializeData(self):
 		try:
@@ -128,8 +148,10 @@ class Pages(tk.Tk):
 			current_time = datetime.datetime.now()			
 
 			if(current_time.day != int(DATE) and AUTOBLOCK == "true"):
-				if(ISBLOCK == "true"):
+				if(ISBLOCK != "true"):
 						self.blockUsb()
+
+
 		finally:
 			pass
 
@@ -151,16 +173,12 @@ class Pages(tk.Tk):
 			tk.PhotoImage(file = './assets/icons/image-07.png')
 		]
 
-
 	def write(self):
 		global ISBLOCK
 		global AUTOBLOCK
 
 		try:
-				if ISBLOCK == 'true':
-					ISBLOCK = 'false'
-				else:
-					ISBLOCK = 'true'
+				ISBLOCK = "true" if ISBLOCK == "false" else "false"
 
 				f = open("./cache/config.txt", "w")
 				f.write(f"{datetime.datetime.now().day}\n")
@@ -170,13 +188,16 @@ class Pages(tk.Tk):
 		finally:
 			pass 
 
+		return ISBLOCK
+
 	def blockUsb(self):
 		try:
-				self.write()
-				script = "block" if ISBLOCK != "true" else "unblock"
-				# cmd(f"sh ./Script/{script}.sh").runFile()
+				script = "block" if self.write() else "unblock"
+				cmd(f"sh ./Script/{script}.sh").runFile()
 		finally:
 			pass
+	
+# Screen Code
 
 class SplashScreen(tk.Frame):
 	def __init__(self, parent, controller, images):
@@ -188,54 +209,28 @@ class SplashScreen(tk.Frame):
 		label1.place(x = 0, y = 0)
 		label1.after(SPLASH_ANIMATION, lambda: controller.show_frame(OnBorading))
 
-
-class cmd:
-	def __init__(self, command):
-		self.command = command
-		self.output = ""
-		self.err = ""
-		self.exit_code = ""
-
-	def run(self):
-		self.output = sub.check_output(self.command, shell=True).decode("utf-8")
-		return self.output.replace("\n", "")
-	
-	def runFile(self):
-		sub.call(self.command, shell=True)
-
-	def run2(self):
-		self.process = sub.Popen(self.command, stdout=sub.PIPE, shell=True)
-		(self.output, self.err) = self.process.communicate()
-		self.exit_code = self.process.wait()
-		self.output = self.output.decode('utf-8')
-		self.err = self.err.decode('utf-8')
-		
 class OnBorading(tk.Frame):
 	def __init__(self, parent, controller, images):
 			tk.Frame.__init__(self, parent)
-
-			# label of frame Layout 2
-			cd_UserName = (cmd(USERNAME)).run()
 			
-			ttk.Label(self, text = f"{cd_UserName}", font=PRIMARYFONT).place(x = 15, y = 20)
+			ttk.Label(self, text = f"{(cmd(USERNAME)).run()}", font=PRIMARYFONT).place(x = 15, y = 20)
+			ttk.Label(self, text = DETAILS_BUTTON, font=SPECIALFONT).place(x = 375, y = 59)
+			
+			
+			
+			color = "red" if ISBLOCK == "true" else "green"
 			
 			ScanUpdate = (ttk.Label(self, text ="Scan Connected devices", font = SECONDARYFONT, foreground = SECONDARYCOLOR))
-			ScanUpdate.place(x = 15, y = 50)
 			
-			ScanUpdate.bind("<Button-1>", lambda e: (cmd("sh ./Script/scan.sh").runFile()))
-			
-			if ISBLOCK == "true":
-				color = "red"
-			else:
-				color = "green"
-
 			button1 = RoundedButton(self, 90, 30, 15, 1, color, command = lambda : controller.blockUsb())
 			button1.create_text(45, 15, text= 'Block' if ISBLOCK == "true" else "Unblock"+" USB", fill="white", font=BUTTONFONT)
-			button1.place(x=450, y=25)
 			
-			ttk.Label(self, text = DETAILS_BUTTON, font=SPECIALFONT).place(x = 375, y = 59)
+			# Place widgts
+			ScanUpdate.place(x = 15, y = 50)
+			button1.place(x=450, y=25)
 
-			# Create a widget to display the text or Image of back 
+			ScanUpdate.bind("<Button-1>", lambda e: (cmd("sh ./Script/scan.sh").runFile()))
+			
 			array = [
 							 ["General",  images[3], 1,   1, General],
 							 ["Sercuity", images[4], 1,   2, General],
@@ -249,9 +244,9 @@ class OnBorading(tk.Frame):
 			for i in array:
 				canvas = tk.Canvas(self, width= 110, height= 110)
 				canvas.create_image(15, 15, anchor = tk.NW, image = i[1])
-				# canvas.create_text(0, 49,   anchor = tk.NW, text = i[0])
-				canvas.place(x=(95 * i[3]), y=(100 * i[2]), width= 110, height= 110)
 				
+				canvas.place(x=(95 * i[3]), y=(100 * i[2]), width= 110, height= 110)
+
 				canvas.bind("<Button-1>", lambda event, arg=i[4]: controller.show_frame(arg))
 
 class Aboutus(tk.Frame):
@@ -264,7 +259,6 @@ class Aboutus(tk.Frame):
 		btnBack.place(x=0, y=10)
 		btnBack.bind("<Button-1>", lambda e: controller.show_frame(OnBorading))
 
-
 		(ttk.Label(self, text ="Digi Drive", font = PRIMARYFONT)).place(x=275, y=25)
 
 		# Create a Label Widget to display the text or Image of back
@@ -273,78 +267,65 @@ class Aboutus(tk.Frame):
 
 		# Add a text widget
 		text=tk.Text(self, font=("Georgia, 10"), yscrollcommand=v.set,wrap=tk.WORD, borderwidth=0, highlightthickness=0, relief=tk.FLAT,  padx=50, pady=10)
-
 		text.insert(tk.END, DETAILS_STRING)
+
 
 		# Attach the scrollbar with the text widget
 		v.config(command=text.yview)
 		text.place(x=0, y=65, width=600, height=235)
 
-# third window frame General
 class General(tk.Frame):
 	def __init__(self, parent, controller, images):
 		tk.Frame.__init__(self, parent)
 
 		btnBack = ttk.Label(self, image=images[1])
 		btnBack.image = images[1]
-		btnBack.place(x=0, y=10)
 		btnBack.bind("<Button-1>", lambda e: controller.show_frame(OnBorading))
 
 
 		master = tk.Frame(self, width=400, height= 300, )
 		master.place(x=100, y=50)
-		# Create a Label Widget to display the text or Image of back
 
-		tk.Label(master, text="Basic Settings").grid(row=0, column=0, sticky=tk.W, pady=2)
 
+		tk.Label(master, text="Basic Settings", font=EVENTFONT).grid(row=0, column=0, sticky=tk.W, pady=2)
 		tk.Label(master, text = "User Name").grid(row = 1, column = 0, sticky = tk.W, pady = 2)
 		tk.Label(master, text = "PC Name").grid(row = 2, column = 0, sticky = tk.W, pady = 2)
 		
 			
 		uName, pcName = (cmd(USERNAME)).run(), (cmd(PCNAME)).run()
-		stat = tk.DISABLED
 
+		self.e1 = tk.Entry(master, width=100)
+		self.e2 = tk.Entry(master, width=100)
+		
+		self.e1.insert(0,uName)
+		self.e2.insert(0,pcName)
 
-		# entry widgets, used to take entry from user
-		e1 = tk.Entry(master, width=100)
-		e2 = tk.Entry(master, width=100)
+		self.e1.grid(row = 1, column = 1,pady = 2, sticky = tk.EW)
+		self.e2.grid(row = 2, column = 1,pady = 2, sticky = tk.EW)
 		
-		e1.insert(0,uName)
-		e2.insert(0,pcName)
+		self.dataCheckbox = [tk.IntVar(), tk.IntVar(), tk.IntVar(), tk.IntVar(), tk.IntVar()]
 
-		# this will arrange entry widgets
-		e1.grid(row = 1, column = 1,pady = 2, sticky = tk.EW)
-		e2.grid(row = 2, column = 1,pady = 2, sticky = tk.EW)
+		(tk.Checkbutton(master, text = "Mute Volumn", onvalue=1, offvalue=0, variable=self.dataCheckbox[0])).grid(row = 3, column = 0, sticky = tk.W)
+		(tk.Checkbutton(master, text = "Automate Turn off all usb Port(12 hours)", onvalue=1, offvalue=0, variable=self.dataCheckbox[1])).grid(row = 3, column = 1, sticky = tk.W,)
+		(tk.Checkbutton(master, text = "Autmoate update", onvalue=1, offvalue=0, variable=self.dataCheckbox[2])).grid(row = 4, column = 0, sticky = tk.W,)
+		(tk.Checkbutton(master, text = "Automate Upgrade check", onvalue=1, offvalue=0, variable=self.dataCheckbox[3])).grid(row = 5, column = 0, sticky = tk.W,)
 		
-		
-		# checkbutton widget
-		arrayOfCheckbox = []
-		
-		arrayOfCheckbox.append(tk.Checkbutton(master, text = "Mute Volumn",))
-		arrayOfCheckbox.append(tk.Checkbutton(master, text = "Automate Turn off all usb Port(12 hours)"))
-		arrayOfCheckbox.append(tk.Checkbutton(master, text = "Autmoate update"))
-		arrayOfCheckbox.append(tk.Checkbutton(master, text = "Automate Upgrade check "))
-		
-		arrayOfCheckbox[0].grid(row = 3, column = 0, sticky = tk.W, )
-		arrayOfCheckbox[1].grid(row = 3, column = 1, sticky = tk.W)
 		if AUTOBLOCK == 'true':
-			arrayOfCheckbox[1].select() 
+			self.dataCheckbox[0].set(1) 
 
-		arrayOfCheckbox[2].grid(row = 4, column = 0, sticky = tk.W)
-		arrayOfCheckbox[3].grid(row = 5, column = 0, sticky = tk.W)
 		
-		# arranging button widgets
-		self.b1 = tk.Button(master, text = "Save", bg = "#717171", width = 10, command = lambda: print("Save"))
-		self.b1.grid(row = 7, column = 0, sticky = tk.W)
-		# self.b1.status = 
+		self.btnSave = tk.Button(master, text = "Save", bg = "#717171", width = 10, command = self.save)
+		self.btnSave.grid(row = 7, column = 0, sticky = tk.W)
+		
+		btnBack.place(x=0, y=10)
 
-	def onChange(self):
-		global stat
-		stat = tk.NORMAL
-
-		self.b1
-
-	# def save(self)
+	def save(self):
+		print(self.e1.get())
+		print(self.e2.get())
+		print(self.dataCheckbox[0].get())
+		print(self.dataCheckbox[1].get())
+		print(self.dataCheckbox[2].get())
+		print(self.dataCheckbox[3].get())
 
 	
 # Driver Code
