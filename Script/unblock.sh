@@ -1,3 +1,3 @@
-echo '1-1' | sudo tee /sys/bus/usb/drivers/usb/bind
 
-sudo shutdown -r now # reboot
+usbguard generate-policy -X > /etc/usbguard/rules.conf
+usbguard generate-policy -X -t allow
