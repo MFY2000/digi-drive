@@ -234,7 +234,7 @@ class OnBorading(tk.Frame):
 			text = "Block" if ISBLOCK == "true" else "Unblock"
 
 			self.btn = RoundedButton(self, 90, 30, 15, 1, color, command = lambda : self.BlockBTN_Change(controller))
-			self.btnText.create_text(45, 15, text =text+" USB", fill="white", font=BUTTONFONT)
+			self.btnText = self.btn.create_text(45, 15, text =text+" USB", fill="white", font=BUTTONFONT)
 			
 			# Place widgts
 			ScanUpdate.place(x = 15, y = 50)
