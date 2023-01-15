@@ -229,12 +229,11 @@ class OnBorading(tk.Frame):
 			
 			ScanUpdate = (ttk.Label(self, text ="Scan Connected devices", font = SECONDARYFONT, foreground = SECONDARYCOLOR))
 			
-			
 			color = BTN_BLOCK if ISBLOCK == "true" else BTN_UNBLOCK
 			text = "Block" if ISBLOCK == "true" else "Unblock"
 
 			self.btn = RoundedButton(self, 90, 30, 15, 1, color, command = lambda : self.BlockBTN_Change(controller))
-			self.btnText.create_text(45, 15, text =text+" USB", fill="white", font=BUTTONFONT)
+			self.btnText = self.btn.create_text(45, 15, text =text+" USB", fill="white", font=BUTTONFONT)
 			
 			# Place widgts
 			ScanUpdate.place(x = 15, y = 50)
@@ -255,21 +254,21 @@ class OnBorading(tk.Frame):
 			for i in array:
 				canvas = tk.Canvas(self, width= 110, height= 110)
 				canvas.create_image(15, 15, anchor = tk.NW, image = i[1])
-				
 				canvas.place(x=(95 * i[3]), y=(100 * i[2]), width= 110, height= 110)
-
 				canvas.bind("<Button-1>", lambda event, arg=i[4]: controller.show_frame(arg))
 	# end of __init__
 
 	def BlockBTN_Change(self, controller):
 		global ISBLOCK
 
-		if(ISBLOCK == "true"):
-			self.btn.itemconfig(self.btnText, text = "Unblock USB")
-			self.btn.config(bg=BTN_UNBLOCK) 
-		else:
-			self.btn.itemconfig(self.btnText, text = "Block USB")
-			self.btn.config(bg=BTN_BLOCK)
+		self.btn.destroy()
+
+		color = BTN_BLOCK if ISBLOCK != "true" else BTN_UNBLOCK
+		text = "Block" if ISBLOCK != "true" else "Unblock"
+
+		self.btn = RoundedButton(self, 90, 30, 15, 1, color, command = lambda : self.BlockBTN_Change(controller))
+		self.btnText = self.btn.create_text(45, 15, text =text+" USB", fill="white", font=BUTTONFONT)
+		self.btn.place(x=450, y=25)
 
 		controller.blockUsb()
 
@@ -327,33 +326,60 @@ class General(tk.Frame):
 
 		self.e1.grid(row = 1, column = 1,pady = 2, sticky = tk.EW)
 		self.e2.grid(row = 2, column = 1,pady = 2, sticky = tk.EW)
-		
 		self.dataCheckbox = [tk.IntVar(), tk.IntVar(), tk.IntVar(), tk.IntVar(), tk.IntVar()]
+		
 
 		(tk.Checkbutton(master, text = "Mute Volumn", onvalue=1, offvalue=0, variable=self.dataCheckbox[0])).grid(row = 3, column = 0, sticky = tk.W)
-		(tk.Checkbutton(master, text = "Automate Turn off all usb Port(12 hours)", onvalue=1, offvalue=0, variable=self.dataCheckbox[1])).grid(row = 3, column = 1, sticky = tk.W,)
+		a = (tk.Checkbutton(master, text = "Automate Turn off all usb Port(12 hours)", onvalue=1, offvalue=0, variable=self.dataCheckbox[1],command=self.checkbutton_function)).grid(row = 3, column = 1, sticky = tk.W)
+
+
 		(tk.Checkbutton(master, text = "Autmoate update", onvalue=1, offvalue=0, variable=self.dataCheckbox[2])).grid(row = 4, column = 0, sticky = tk.W,)
 		(tk.Checkbutton(master, text = "Automate Upgrade check", onvalue=1, offvalue=0, variable=self.dataCheckbox[3])).grid(row = 5, column = 0, sticky = tk.W,)
 		
 		if AUTOBLOCK == 'true':
 			self.dataCheckbox[0].set(1) 
 
-		
-		self.btnSave = tk.Button(master, text = "Save", bg = "#717171", width = 10, command = self.save)
+		if uName == "root":
+			self.e1.config(state='disable')
+
+		self.pcname = pcName
+		self.uName = uName
+		self.co = controller
+
+
+		self.btnSave = tk.Button(master, text = "Save", bg = "#717171", width = 10, command=self.save)
 		self.btnSave.grid(row = 7, column = 0, sticky = tk.W)
 		
 		btnBack.place(x=0, y=10)
 
-	def save(self):
-		print(self.e1.get())
-		print(self.e2.get())
-		print(self.dataCheckbox[0].get())
-		print(self.dataCheckbox[1].get())
-		print(self.dataCheckbox[2].get())
-		print(self.dataCheckbox[3].get())
 
-	
-# Driver Code
+	def checkbutton_function(self):
+		global AUTOBLOCK
+
+		isAuto = self.dataCheckbox[1].get()
+		if (isAuto == 0):
+			AUTOBLOCK = "false"
+		else:
+			AUTOBLOCK = "true"
+		self.co.write()
+
+	def save(self):
+
+		username = ""
+		pcname = self.e2.get()
+		isPCName = 1 if pcname != self.pcname else 0
+		isMute = self.dataCheckbox[0].get()
+		isupdate = self.dataCheckbox[2].get()
+		isupgreade = self.dataCheckbox[3].get()
+		
+		if (self.e1.config("state")[-1] != "disable"):
+			username = self.e1.get()
+
+		data = f"{username} {self.uName} {isPCName} {isMute} {isupdate} {isupgreade} {pcname}"
+
+		cmd(f"sh ./Script/basicInfo.sh "+data).runFile()
+		
+
 app = Pages()
 app.title("Digi Drive")
 screen = ScreenSizing( [600, 300], [app.winfo_screenwidth(), app.winfo_screenheight()] )
